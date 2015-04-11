@@ -46,7 +46,7 @@ public class Game extends Canvas implements Runnable
 		setPreferredSize(size);
 
 		try {
-			image0 = ImageIO.read(new File("res/textures/brick.png"));
+			image0 = ImageIO.read(new File("res/textures/brick2.png"));
 			image1 = ImageIO.read(new File("res/textures/antApple.png"));
 			image2 = ImageIO.read(new File("res/textures/pumpkin.png"));
 		} catch (IOException e) {
@@ -66,7 +66,7 @@ public class Game extends Canvas implements Runnable
 		{
 			for(int ver = 0; ver < 100; ver++)
 			{
-				Tile t = new Tile(50 * hor, 50 * ver, 50, 50, 0f, image0);
+				Tile t = new Tile(199 * hor, 199 * ver, 200, 200, 0f, image0);
 				tiles.add(t);
 			}
 		}
