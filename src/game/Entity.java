@@ -1,39 +1,34 @@
 package game;
 
-import java.awt.*;
-import java.awt.image.BufferedImage;
-
 /**
  * Created by Lampkraft on 2015-04-05.
  */
 public class Entity
 {
-    protected float x, y, xscale, yscale, offsetscale;
-    protected int maxwidth, maxheight, width, height;
-    protected BufferedImage image;
-    protected Vector2f v1, v2;
+    protected float xPos, yPos, xScale = 1.f, yScale = 1.f;
+    protected int width, height;
 
-    protected Vector2f setOffset(View view)
+    protected Vector2f getDrawPosition(View view)
     {
-        return new Vector2f(((x - view.getX() + view.getWidth()/2) * offsetscale) + view.getWidth()/2 - width/2, ((y - view.getY() + view.getHeight()/2) * offsetscale) + view.getHeight()/2 - height/2);
+        return new Vector2f(((xPos - view.getX() + view.getWidth()/2 - width/2) * view.getZoom()) + view.getWidth()/2,
+                            ((yPos - view.getY() + view.getHeight()/2 - height/2) * view.getZoom()) + view.getHeight()/2);
     }
 
-    protected Vector2f setScaleOffset(View view)
+    protected Vector2f getDrawScale(View view)
     {
-        offsetscale = view.getZoom();
-        return new Vector2f(offsetscale * maxwidth * xscale, offsetscale * maxheight * yscale);
+        return new Vector2f(view.getZoom() * width * xScale, view.getZoom() * height * yScale);
     }
 
     protected void setScale(float x, float y)
     {
-        this.xscale = x;
-        this.yscale = y;
+        xScale = x;
+        yScale = y;
     }
 
     public void setPosition(float x, float y)
     {
-        this.x = x;
-        this.y = y;
+        xPos = x;
+        yPos = y;
     }
 
     public void setSize(int width, int height)
@@ -44,29 +39,21 @@ public class Entity
 
     public void setX(float x)
     {
-        this.x = x;
+        xPos = x;
     }
 
     public void setY(float y)
     {
-        this.y = y;
+        yPos = y;
     }
 
     public float getX()
     {
-        return x;
+        return xPos;
     }
 
     public float getY()
     {
-        return x;
-    }
-
-    public float getOffsetScale() {
-        return offsetscale;
-    }
-
-    public void setOffsetScale(float offsetScale) {
-        this.offsetscale = offsetScale;
+        return yPos;
     }
 }

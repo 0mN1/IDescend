@@ -17,191 +17,200 @@ import javax.swing.JFrame;
 
 public class Game extends Canvas implements Runnable
 {
-	private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L;
 
-	// Resolution
-	public static int width = 1280;
-	public static int height = width / 16 * 9;
-	public static int scale = 1;
+    // Resolution
+    public static int width = 1280;
+    public static int height = 720;
+    public static int scale = 1;
 
-	public static String title = "Rain";
+    public static String title = "I Descend";
 
-	private Thread thread;
-	private JFrame frame;
-	private Keyboard key;
-	private boolean running = false;
+    private Thread thread;
+    private JFrame frame;
+    private Keyboard key;
+    private boolean running = false;
 
-	private Player player;
-	private List<Character> characters = new ArrayList<>();
-	private List<Tile> tiles = new ArrayList<>();
-	private BufferedImage image0, image1, image2;
+    private Player player;
+    private List<Character> characters = new ArrayList<>();
+    private List<Tile> tiles = new ArrayList<>();
+    private BufferedImage image0, image1, image2;
 
-	private MultiplayerHandler multiplayer = new MultiplayerHandler(false);
+    private MultiplayerHandler multiplayer = new MultiplayerHandler(false);
 
-	private View view;
+    private View view;
 
-	public Game()
-	{
-		Dimension size = new Dimension (width * scale, height * scale);
-		setPreferredSize(size);
+    public Game()
+    {
+        Dimension size = new Dimension (width * scale, height * scale);
+        setPreferredSize(size);
 
-		try {
-			image0 = ImageIO.read(new File("res/textures/brick3.png"));
-			image1 = ImageIO.read(new File("res/textures/antApple.png"));
-			image2 = ImageIO.read(new File("res/textures/pumpkin.png"));
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+        frame = new JFrame();
 
-		frame = new JFrame();
+        key = new Keyboard();
 
-		key = new Keyboard();
+        view = new View(width, height);
 
-		view = new View(width, height);
+        addKeyListener(key);
 
-		player = new Player(image2);
-		player.setPosition(width / 2, height / 2);
+        // Clean up when program exits
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+            @Override
+            public void run() {
+                if (multiplayer != null)
+                    multiplayer.close();
+            }
+        });
 
-		for(int hor = 0; hor < 25; hor++)
-		{
-			for(int ver = 0; ver < 25; ver++)
-			{
-				Tile t = new Tile(399 * hor, 399 * ver, 400, 400, 0f, image0);
-				tiles.add(t);
-			}
-		}
+        loadResources();
 
-		for(int i = 0; i < 100; i++)
-		{
-			Character c = new Character((float)Math.random() * 5000, (float)Math.random() * 5000,
-					73, 88, image1);
-			characters.add(c);
-		}
+        initiateWorld();
+    }
 
-		addKeyListener(key);
+    private void loadResources()
+    {
+        try {
+            image0 = ImageIO.read(new File("res/textures/brick3.png"));
+            image1 = ImageIO.read(new File("res/textures/antApple.png"));
+            image2 = ImageIO.read(new File("res/textures/pumpkin.png"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
-		// Clean up when program exits
-		Runtime.getRuntime().addShutdownHook(new Thread() {
-			@Override
-			public void run() {
-				if (multiplayer != null)
-					multiplayer.close();
-			}
-		});
-	}
+    private void initiateWorld()
+    {
 
-	public synchronized void start()
-	{
-		running = true;
-		thread = new Thread(this, "Display");
-		thread.start();
-	}
+        player = new Player(image2);
+        player.setPosition(width / 2, height / 2);
 
-	public synchronized void stop()
-	{
-		running = false;
-		try
-		{
-			thread.join();
-		}
-		catch (InterruptedException e)
-		{
-			e.printStackTrace();
-		}
-	}
+        for(int hor = 0; hor < 25; hor++)
+        {
+            for(int ver = 0; ver < 25; ver++)
+            {
+                Tile t = new Tile(399 * hor, 399 * ver, 400, 400, 0f, image0);
+                tiles.add(t);
+            }
+        }
 
-	public void run()
-	{
-		long lastTime = System.nanoTime();
-		long timer = System.currentTimeMillis();
-		final double ns = 1000000000.0;
-		double delta = 0;
-		int frames = 0;
+        for(int i = 0; i < 100; i++)
+        {
+            Character c = new Character((float)Math.random() * 5000, (float)Math.random() * 5000,
+                            73, 88, image1);
+            characters.add(c);
+        }
 
-		requestFocus();
+    }
 
-		while (running)
-		{
-			long now = System.nanoTime();
-			delta = (now - lastTime) / ns;
-			lastTime = now;
+    public synchronized void start()
+    {
+        running = true;
+        thread = new Thread(this, "Display");
+        thread.start();
+    }
 
-			update(delta);
+    public synchronized void stop()
+    {
+        running = false;
+        try {
+                thread.join();
+        } catch (InterruptedException e) {
+                e.printStackTrace();
+        }
+    }
 
-			render();
-			frames++;
+    public void run()
+    {
+        long lastTime = System.nanoTime();
+        long timer = System.currentTimeMillis();
+        final double ns = 1000000000.0;
+        double delta = 0;
+        int frames = 0;
 
-			if (System.currentTimeMillis() - timer > 1000)
-			{
-				timer += 1000;
-				frame.setTitle(title + " | " + 1/delta + " " + frames + "fps");
-				frames = 0;
-			}
-		}
-	}
+        requestFocus();
 
-	public void update(double delta)
-	{
-		key.update();
-		player.update(key, delta, view);
+        while (running)
+        {
+            long now = System.nanoTime();
+            delta = (now - lastTime) / ns;
+            lastTime = now;
 
-		if(key.xkey.isPressed())
-			multiplayer.setAsHost(true);
-		if(key.zkey.isPressed())
-			multiplayer.setAsHost(false);
-		if(key.ckey.isPressed())
-			multiplayer.connectToHost();
-		if(key.tkey.isHeld())
-			view.zoom(1.5f, delta);
-		if(key.ykey.isHeld())
-			view.zoom(-1.5f, delta);
-	}
+            update(delta);
 
-	public void render()
-	{
-		BufferStrategy bs = getBufferStrategy();
-		if (bs == null)
-		{
-			createBufferStrategy(3);
-			return;
-		}
+            render();
+            frames++;
 
-		Graphics2D g = (Graphics2D)bs.getDrawGraphics();
+            if (System.currentTimeMillis() - timer > 1000)
+            {
+                timer += 1000;
+                frame.setTitle(title + " | " + (int)(1/delta) + " " + frames + "fps");
+                frames = 0;
+            }
+        }
+    }
 
-		g.setColor(Color.darkGray);
-		g.fillRect(0, 0, getWidth(), getHeight());
+    public void update(double delta)
+    {
+        key.update();
+        player.update(key, delta, view);
 
-		// Draw begin
+        if(key.xkey.isPressed())
+            multiplayer.setAsHost(true);
+        if(key.zkey.isPressed())
+            multiplayer.setAsHost(false);
+        if(key.ckey.isPressed())
+            multiplayer.connectToHost();
+        if(key.tkey.isHeld())
+            view.zoom(0.5f, delta);
+        if(key.ykey.isHeld())
+            view.zoom(-0.5f, delta);
+    }
 
-		for(Tile t : tiles)
-		{
-			t.draw(g, view);
-		}
+    public void render()
+    {
+        BufferStrategy bs = getBufferStrategy();
+        if (bs == null)
+        {
+            createBufferStrategy(3);
+            return;
+        }
 
-		player.draw(g, view);
+        Graphics2D g = (Graphics2D)bs.getDrawGraphics();
 
-		for(Character c : characters)
-		{
-			c.draw(g, view);
-		}
+        g.setColor(Color.darkGray);
+        g.fillRect(0, 0, getWidth(), getHeight());
+
+        // Draw begin
+
+        for(Tile t : tiles)
+        {
+            t.draw(g, view);
+        }
+
+        for(Character c : characters)
+        {
+            c.draw(g, view);
+        }
+
+        player.draw(g, view);
 
 
-		// Draw end
+        // Draw end
 
-		g.dispose();
-		bs.show();
-	}
+        g.dispose();
+        bs.show();
+    }
 
-	public static void main(String[] args)
-	{
-		Game game = new Game();
-		game.frame.setResizable(false);
-		game.frame.add(game);
-		game.frame.pack();
-		game.frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		game.frame.setLocationRelativeTo(null);
-		game.frame.setVisible(true);
+    public static void main(String[] args)
+    {
+        Game game = new Game();
+        game.frame.setResizable(false);
+        game.frame.add(game);
+        game.frame.pack();
+        game.frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        game.frame.setLocationRelativeTo(null);
+        game.frame.setVisible(true);
 
-		game.start();
-	}
+        game.start();
+    }
 }

@@ -29,7 +29,7 @@ public class View {
 
     public void zoom(float amount, double delta)
     {
-        zoom += amount * delta;
+        zoom += zoom*amount * delta;
     }
 
     public float getZoom()

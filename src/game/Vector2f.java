@@ -5,17 +5,16 @@ package game;
  */
 public class Vector2f {
 
-    public float a, b;
+    public float x, y;
 
     public Vector2f(float a, float b)
     {
-        this.a = a;
-        this.b = b;
+        x = a;
+        y = b;
     }
 
     public Vector2f()
     {
-        this.a = this.b = 0.f;
+        x = y = 0.f;
     }
-
 }

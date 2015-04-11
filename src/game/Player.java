@@ -1,7 +1,6 @@
 package game;
 
 
-import java.awt.*;
 import java.awt.image.BufferedImage;
 
 /**
@@ -19,15 +18,15 @@ public class Player extends Character
 
     public void update(Keyboard key, double delta, View view)
     {
-        if(key.up.isHeld())
+        if(key.up.isHeld() || key.wkey.isHeld())
             moveUp(delta);
-        if(key.down.isHeld())
+        if(key.down.isHeld() || key.skey.isHeld())
             moveDown(delta);
-        if(key.left.isHeld())
+        if(key.left.isHeld() || key.akey.isHeld())
             moveLeft(delta);
-        if(key.right.isHeld())
+        if(key.right.isHeld() || key.dkey.isHeld())
             moveRight(delta);
 
-        view.setPosition(x, y);
+        view.setPosition(xPos, yPos);
     }
 }
