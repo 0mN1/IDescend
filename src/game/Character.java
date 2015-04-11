@@ -19,8 +19,6 @@ public class Character extends Entity{
         this.width = Math.round(xscale * maxwidth * offsetscale);
         this.height = Math.round(yscale * maxheight * offsetscale);
         this.velocity = 200.f;
-        this.v1 = new Vector2f();
-        this.v2 = new Vector2f();
     }
 
     public void update()
