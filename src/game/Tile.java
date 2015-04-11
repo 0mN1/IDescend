@@ -9,22 +9,16 @@ import java.awt.image.BufferedImage;
  */
 public class Tile extends Entity {
 
-    Image image;
-
     public Tile(float x, float y, int width, int height, float depth, BufferedImage image)
     {
         this.image = image;
         this.x = x;
         this.y = y;
-        this.xscale = 1;
-        this.yscale = 1;
+        this.xscale = this.yscale = 1;
         this.maxwidth = width;
         this.maxheight = height;
         this.width = Math.round(xscale * maxwidth);
         this.height = Math.round(yscale * maxheight);
-        this.xscale = this.yscale = 1.f;
-        this.v1 = new Vector2f();
-        this.v2 = new Vector2f();
     }
 
     public void draw(Graphics2D g, View view)
