@@ -1,4 +1,6 @@
-package game;
+package graphics;
+
+import graphics.View;
 
 /**
  * Created by Lampkraft on 2015-04-05.

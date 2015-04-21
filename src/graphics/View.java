@@ -1,4 +1,4 @@
-package game;
+package graphics;
 
 /**
  * Created by Lampkraft on 2015-04-05.

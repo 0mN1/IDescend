@@ -1,6 +1,8 @@
 package game;
 
 
+import input.Keyboard;
+import graphics.View;
 import java.awt.image.BufferedImage;
 
 /**

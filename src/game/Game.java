@@ -1,5 +1,8 @@
 package game;
 
+import input.Keyboard;
+import graphics.View;
+import network.MultiplayerHandler;
 import java.awt.Canvas;
 import java.awt.Color;
 import java.awt.Dimension;

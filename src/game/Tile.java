@@ -1,5 +1,8 @@
 package game;
 
+import graphics.Vector2f;
+import graphics.Entity;
+import graphics.View;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 
