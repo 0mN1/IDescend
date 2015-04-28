@@ -8,17 +8,23 @@ import java.awt.image.BufferedImage;
 
 public class Character extends Entity{
 
-    protected float velocity;
+    protected Vector2f velocity = new Vector2f();
+    protected float acceleration;
     protected BufferedImage image;
 
-    public Character(float x, float y, int width, int height, BufferedImage image)
+    public Character(float x, float y, BufferedImage image)
     {
         this.image = image;
         this.xPos = x;
         this.yPos = y;
-        this.width = width;
-        this.height = height;
-        this.velocity = 200.f;
+        this.width = image.getWidth();
+        this.height = image.getHeight();
+        this.acceleration = 200.f;
+    }
+    
+    public Vector2f getVelocity()
+    {
+        return velocity;
     }
 
     public void update()
@@ -33,25 +39,37 @@ public class Character extends Entity{
 
         g.drawImage(image, (int)drawPosition.x, (int)drawPosition.y, (int)drawScale.x, (int)drawScale.y, null);
     }
-
-    public void moveUp(double delta)
+    
+    public void move(double delta)
     {
-        yPos -= velocity * delta;
+        xPos += velocity.x * delta;
+        yPos += velocity.y * delta;
+    }
+    
+    public void stop()
+    {
+        velocity.x = 0.f;
+        velocity.y = 0.f;
     }
 
-    public void moveDown(double delta)
+    public void moveUp()
     {
-        yPos += velocity * delta;
+        velocity.y = -acceleration;
     }
 
-    public void moveRight(double delta)
+    public void moveDown()
     {
-        xPos += velocity * delta;
+        velocity.y = acceleration;
     }
 
-    public void moveLeft(double delta)
+    public void moveRight()
     {
-        xPos -= velocity * delta;
+        velocity.x = acceleration;
+    }
+
+    public void moveLeft()
+    {
+        velocity.x = -acceleration;
     }
 }
 

@@ -1,6 +1,7 @@
 package game;
 
 
+import graphics.Vector2f;
 import input.Keyboard;
 import graphics.View;
 import java.awt.image.BufferedImage;
@@ -12,23 +13,46 @@ import java.awt.image.BufferedImage;
  */
 public class Player extends Character
 {
+    private boolean newData;
+    private Vector2f prevVel = new Vector2f();
+    
     public Player(BufferedImage image)
     {
-        super(0, 0, 167, 144, image);
+        super(0, 0, image);
         this.image = image;
     }
 
     public void update(Keyboard key, double delta, View view)
     {
+        prevVel.copy(velocity);
+        
+        stop();
+        
         if(key.up.isHeld() || key.wkey.isHeld())
-            moveUp(delta);
+            moveUp();
         if(key.down.isHeld() || key.skey.isHeld())
-            moveDown(delta);
+            moveDown();
         if(key.left.isHeld() || key.akey.isHeld())
-            moveLeft(delta);
+            moveLeft();
         if(key.right.isHeld() || key.dkey.isHeld())
-            moveRight(delta);
+            moveRight();
+        
+        move(delta);
+        
+        if(!velocity.compare(prevVel))
+            newData = true;
 
         view.setPosition(xPos, yPos);
+    }
+    
+    public boolean hasNewData()
+    {
+        if(newData)
+        {
+            newData = false;
+            return true;
+        }
+        else
+            return false;    
     }
 }

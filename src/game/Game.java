@@ -32,14 +32,15 @@ public class Game extends Canvas implements Runnable
     private Thread thread;
     private JFrame frame;
     private Keyboard key;
-    private boolean running = false;
+    private boolean running = false, readyToQuit = false;
 
     private Player player;
+    private List<NetworkPlayer> netPlayers = new ArrayList();
     private List<Character> characters = new ArrayList<>();
     private List<Tile> tiles = new ArrayList<>();
-    private BufferedImage image0, image1, image2;
+    private BufferedImage image0, image1, image2, image3;
 
-    private MultiplayerHandler multiplayer = new MultiplayerHandler(false);
+    private MultiplayerHandler multiplayer;
 
     private View view;
 
@@ -60,6 +61,9 @@ public class Game extends Canvas implements Runnable
         Runtime.getRuntime().addShutdownHook(new Thread() {
             @Override
             public void run() {
+                running = false;
+                while(!readyToQuit);
+                    
                 if (multiplayer != null)
                     multiplayer.close();
             }
@@ -74,8 +78,9 @@ public class Game extends Canvas implements Runnable
     {
         try {
             image0 = ImageIO.read(new File("res/textures/brick3.png"));
-            image1 = ImageIO.read(new File("res/textures/antApple.png"));
-            image2 = ImageIO.read(new File("res/textures/pumpkin.png"));
+            image1 = ImageIO.read(new File("res/textures/skeleton.png"));
+            image2 = ImageIO.read(new File("res/textures/warrior.png"));
+            image3 = ImageIO.read(new File("res/textures/mage.png"));
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -86,6 +91,8 @@ public class Game extends Canvas implements Runnable
 
         player = new Player(image2);
         player.setPosition(width / 2, height / 2);
+        
+        multiplayer = new MultiplayerHandler(false, player);
 
         for(int hor = 0; hor < 25; hor++)
         {
@@ -99,7 +106,7 @@ public class Game extends Canvas implements Runnable
         for(int i = 0; i < 100; i++)
         {
             Character c = new Character((float)Math.random() * 5000, (float)Math.random() * 5000,
-                            73, 88, image1);
+                            image1);
             characters.add(c);
         }
 
@@ -150,19 +157,69 @@ public class Game extends Canvas implements Runnable
                 frames = 0;
             }
         }
+        
+        readyToQuit = true;
+    }
+    
+    private void removeNetPlayer(String id)
+    {
+        for(int i = 0; i < netPlayers.size(); i++)
+        {
+            if(netPlayers.get(i).getId().equals(id))
+            {
+                netPlayers.remove(i);
+                break;
+            }
+        }
     }
 
+    public void updateMultiplayer(double delta)
+    {
+        if(multiplayer.hasNewPlayer())
+            netPlayers.add(new NetworkPlayer(multiplayer.getNewPlayer(), image3));
+        
+        multiplayer.update(delta);
+        while(multiplayer.hasNewUpdate())
+        {
+            String msg = multiplayer.getNextUpdate();
+            String[] words = msg.split(" ");
+            
+            if(words[0].equals("rm"))
+            {
+                multiplayer.removeClient(words[1]);
+                removeNetPlayer(words[1]);
+            }
+        }
+        
+        for(NetworkPlayer np : netPlayers)
+        {
+            np.update(delta);
+        }
+    }
+    
     public void update(double delta)
     {
         key.update();
         player.update(key, delta, view);
 
+        updateMultiplayer(delta);
+        
         if(key.xkey.isPressed())
             multiplayer.setAsHost(true);
         if(key.zkey.isPressed())
             multiplayer.setAsHost(false);
         if(key.ckey.isPressed())
-            multiplayer.connectToHost();
+        {
+            if(multiplayer.isHost())
+                multiplayer.disconnectAllClients();
+            else
+            {
+                if(!multiplayer.isConnected())
+                    multiplayer.connectToHost();
+                else
+                    multiplayer.disconnectFromHost();
+            }
+        }
         if(key.tkey.isHeld())
             view.zoom(0.5f, delta);
         if(key.ykey.isHeld())
@@ -191,6 +248,11 @@ public class Game extends Canvas implements Runnable
         }
 
         for(Character c : characters)
+        {
+            c.draw(g, view);
+        }
+
+        for(NetworkPlayer c : netPlayers)
         {
             c.draw(g, view);
         }

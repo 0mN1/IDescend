@@ -1,9 +1,9 @@
 package network;
 
+import game.Player;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.util.List;
@@ -18,29 +18,75 @@ import java.util.ArrayList;
 public class MultiplayerHandler implements Runnable
 {
     private boolean host;
+    private String name;
+    
+    private int nPlayers;
+    private List<ClientSocket> clientSockets;
+    
+    private Player player;
+    
+    private double timer = 0.d, timerLimit = 2.1d;
+    
+    private List<String> updates = new ArrayList();
+    private List<String> gUpdates = new ArrayList();
     
     // Host
     private ServerSocket serverSocket;
-    private List<ClientSocket> clientSockets;
     private boolean searchForClients;
     private Thread thread;
+    private int nextId;
     
     // Client
     private String hostAddress;
     private Socket hostSocket;
     private DataOutputStream writer;
     private InputStream reader;
+    private String currentRequest = "";
+    private boolean isConnected = false;
     
-    public MultiplayerHandler()
+    public MultiplayerHandler(Player player)
     {
-        hostAddress = "127.0.0.1";
+        hostAddress = "81.225.136.216";
+        this.player = player;
     }
     
-    public MultiplayerHandler(boolean host)
+    public MultiplayerHandler(boolean host, Player player)
     {
-        hostAddress = "127.0.0.1";
+        hostAddress = "192.168.0.100";
         this.host = !host;
         setAsHost(host);
+        this.player = player;
+    }
+    
+    public boolean isHost()
+    {
+        return host;
+    }
+    
+    public boolean isConnected()
+    {
+        return isConnected;
+    }
+    
+    /**
+     * Tells if a new player has been connected.
+     * 
+     * @return true if there is a new player.
+     */
+    public boolean hasNewPlayer()
+    {
+        return (nPlayers < clientSockets.size());
+    }
+    
+    /**
+     * Gives the socket for the next connected player.
+     * 
+     * @return Socket of the next of the latest connected players.
+     */
+    public ClientSocket getNewPlayer()
+    {
+        nPlayers++;
+        return clientSockets.get(nPlayers-1);
     }
     
     /**
@@ -72,7 +118,7 @@ public class MultiplayerHandler implements Runnable
                 
                 close();
                 hostSocket = new Socket();
-                clientSockets = null;
+                clientSockets = new ArrayList();
             }
             
             this.host = host;
@@ -146,11 +192,27 @@ public class MultiplayerHandler implements Runnable
             {
                 try
                 {
+                    gUpdates.add("rm " + clientSockets.get(i).id);
                     clientSockets.get(i).close();
                     clientSockets.remove(i);
                     i--;
                 } catch (Exception e){}
             }
+        
+        nPlayers = 0;
+    }
+    
+    public void removeClient(String id)
+    {
+        for(int i = 0; i < clientSockets.size(); i++)
+        {
+            if(clientSockets.get(i).getId().equals(id))
+            {
+                clientSockets.remove(i);
+                nPlayers--;
+                break;
+            }
+        }
     }
     
     @Override // Server
@@ -178,7 +240,16 @@ public class MultiplayerHandler implements Runnable
         ClientSocket clientSocket;
         
         try {
-            clientSocket = new ClientSocket(serverSocket.accept());
+            nextId++;
+            clientSocket = new ClientSocket(serverSocket.accept(), "" + nextId);
+            clientSocket.write("add 0 " + name + " " + player.getX() + " " + player.getY() + "\r\n");
+            
+            for(ClientSocket cs : clientSockets)
+            {
+                clientSocket.write("add " + cs.id + " " + cs.name + " " + cs.position.x + " " + cs.position.y + "\r\n");
+                cs.write("add " + clientSocket.id + " " + clientSocket.name + " " + clientSocket.position.x + " " + clientSocket.position.y + "\r\n");
+            }
+            
             System.out.println("Client " + clientSocket.getName() + ": " + clientSocket.getInetAddress() + " has connected.");
         } catch(Exception e) {
             clientSocket = null;
@@ -197,10 +268,12 @@ public class MultiplayerHandler implements Runnable
             hostSocket.connect(new InetSocketAddress(hostAddress, 8000), 10000);
             writer = new DataOutputStream(hostSocket.getOutputStream());
             reader = hostSocket.getInputStream();
+            isConnected = true;
             
             String input = readFromHost();
             writer.writeBytes("Omni\r\n");
             input = readFromHost();
+            writer.writeBytes(player.getX() + " " + player.getY() + "\r\n");
             
         } catch(Exception e) {}
     }
@@ -214,8 +287,9 @@ public class MultiplayerHandler implements Runnable
         if(hostSocket.isConnected() && !hostSocket.isClosed())
         {
             try {
-                writer.writeBytes("Bye!\r\n");
+                writer.writeBytes("rm this\r\n");
                 hostSocket.close();
+                isConnected = false;
             } catch(Exception e) {}
         }
     }
@@ -239,67 +313,151 @@ public class MultiplayerHandler implements Runnable
         
          return request.split("\r\n")[0];
     }
-}
-
-/**
- * 
- * @author Herman Hallstedt
- */
-class ClientSocket
-{
-    private Socket socket;
-    private DataOutputStream writer;
-    private InputStream reader;
     
-    private String name;
-    
-    public ClientSocket(Socket s)
+    public void update(double delta)
     {
-        try {
-            socket = s;
-            writer = new DataOutputStream(socket.getOutputStream());
-            reader = socket.getInputStream();
+        if(host)
+        {
+            timer += delta;
+            if(timer >= timerLimit || player.hasNewData())
+            {
+                try {
+                    updates.add("pos 0 " + player.getX() + " " + player.getY());
+                    updates.add("vel 0 " + player.getVelocity().x + " " + player.getVelocity().y);
+                } catch (Exception e) {}
+                timer = 0;
+            }
             
-            writer.writeBytes("What's your name?\r\n");
+            for(int i = 0; i < Math.min(nPlayers, clientSockets.size()); i++)
+            {
+                clientSockets.get(i).update(gUpdates, updates);
+            }
             
-            name = read();
+            for(int i = 0; i < updates.size(); i++)
+            {
+                for(int j = 0; j < Math.min(nPlayers, clientSockets.size()); j++)
+                {
+                    clientSockets.get(j).write(updates.get(i) + "\r\n");
+                }
+                updates.remove(0);
+                i--;
+            }
+        }
+        else if(hostSocket.isConnected() && !hostSocket.isClosed())
+        {
+            timer += delta;
+            if(timer >= timerLimit || player.hasNewData())
+            {
+                try {
+                    writer.writeBytes("pos " + player.getX() + " " + player.getY() + "\r\n" +
+                                      "vel " + player.getVelocity().x + " " + player.getVelocity().y + "\r\n");
+                } catch (Exception e) {}
+                timer = 0;
+            }
             
-            writer.writeBytes("Hi " + name + "!\r\n");
-        } catch (Exception ex) {}
+            updateFromHost();
+            applyUpdates();
+        }
     }
     
-    private String read() throws IOException
+    /**
+     * Client
+     */
+    private void updateFromHost()
     {
-        String request = "";
-        
-        while(!request.endsWith("\r\n"))
-        {
-            int inputByte = reader.read();
-            
-            if(inputByte != -1)
+        try {
+            while(reader.available() > 0)
             {
-                request += (char)inputByte;
+                int inputByte = reader.read();
+                currentRequest += (char)inputByte;
+
+                if(currentRequest.endsWith("\r\n"))
+                {
+                    updates.add(currentRequest.split("\r\n")[0]);
+                    currentRequest = "";
+                    break;
+                }
+            }
+        } catch (IOException e) {
+            currentRequest = "";
+        }
+    }
+    
+    private void applyUpdates()
+    {
+        for(int i = 0; i < updates.size(); i++)
+        {
+            String[] words = updates.get(i).split(" ");
+            System.out.println(words);
+            
+            switch(words[0])
+            {
+                case "pos":
+                {
+                    ClientSocket cs = getClient(words[1]);
+                    if(cs != null)
+                    {
+                        cs.position.x = Float.parseFloat(words[2]);
+                        cs.position.y = Float.parseFloat(words[3]);
+                        cs.newData = true;
+                    }
+                    break;
+                }
+                
+                case "vel":
+                {
+                    ClientSocket cs = getClient(words[1]);
+                    if(cs != null)
+                    {
+                        cs.velocity.x = Float.parseFloat(words[2]);
+                        cs.velocity.y = Float.parseFloat(words[3]);
+                        cs.newData = true;
+                    }
+                    break;
+                }
+                
+                case "add":
+                {
+                    clientSockets.add(new ClientSocket(words[1], words[2], Float.parseFloat(words[3]), Float.parseFloat(words[4])));
+                    break;
+                }
+                    
+                case "rm":
+                {
+                    gUpdates.add(updates.get(i));
+                    break;
+                }
+            }
+            updates.remove(i);
+            i--;
+        }
+    }
+    
+    public boolean hasNewUpdate()
+    {
+        return (gUpdates.size() > 0);
+    }
+    
+    public String getNextUpdate()
+    {
+        String s = gUpdates.get(0);
+        gUpdates.remove(0);
+        return s;
+    }
+    
+    private ClientSocket getClient(String id)
+    {
+        ClientSocket cs = null;
+        
+        for(ClientSocket c : clientSockets)
+        {
+            if(id.equals(c.getId()))
+            {
+                cs = c;
+                break;
             }
         }
         
-         return request.split("\r\n")[0];
-    }
-    
-    public void close()
-    {
-        try {
-            writer.writeBytes("See ya " + name + "!\r\n");
-            socket.close();
-        } catch (Exception ex) {}
-    }
-    
-    public InetAddress getInetAddress()
-    {
-        return socket.getInetAddress();
-    }
-    
-    public String getName()
-    {
-        return name;
+        return cs;
     }
 }
